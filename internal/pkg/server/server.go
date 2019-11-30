@@ -3,7 +3,7 @@ package server
 import (
 	"gomc/internal/pkg/config"
 	"gomc/internal/pkg/packets"
-	"gomc/internal/pkg/packets/clientbound"
+	"gomc/internal/pkg/packets/serverbound"
 	"io/ioutil"
 	"net"
 	"strconv"
@@ -48,7 +48,7 @@ func(s *Server) Start() {
 		s.Verbose("message includes: \"" + string(msg) + "\"")
 		packet := packets.Parse(msg)
 		if packet.PacketID == 0 {
-			handshake := clientbound.NewHandshakePacket(msg)
+			handshake := serverbound.NewHandshakePacket(msg)
 			handshake.Print(handshake)
 		}
 	}

@@ -1,4 +1,4 @@
-package clientbound
+package serverbound
 
 import (
 	"gomc/internal/pkg/packets"

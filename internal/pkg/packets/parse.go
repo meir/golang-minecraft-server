@@ -15,13 +15,17 @@ func(p *Packet) getFunction(in string) *ReadingFunc {
 		"unsigned_short": 	ReadingFunc(p.readUnsignedShort),
 		"int": 				ReadingFunc(p.readInt),
 		"long": 			ReadingFunc(p.readLong),
+		"unsigned_long":	ReadingFunc(p.readUnsignedLong),
 		"float": 			ReadingFunc(p.readFloat),
 		"double": 			ReadingFunc(p.readDouble),
 		"string": 			ReadingFunc(p.readString),
 		"chat": 			ReadingFunc(p.readChat),
 		"identifier": 		ReadingFunc(p.readIdentifier),
+		"position":			ReadingFunc(p.readPosition),
 		"varint": 			ReadingFunc(p.readVarInt),
 		"varlong": 			ReadingFunc(p.readVarLong),
+		"angle":			ReadingFunc(p.readAngle),
+		"uuid":				ReadingFunc(p.readUUID),
 	}
 	if f, ok := funcs[in]; ok {
 		return &f

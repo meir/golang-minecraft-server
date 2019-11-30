@@ -2,10 +2,13 @@ package packets
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"math"
+	"regexp"
 	"strconv"
+	"strings"
 )
 
 func(p *Packet) readByte() (interface{}, error) {
@@ -90,6 +93,23 @@ func(p *Packet) readLong() (interface{}, error) {
 	return value, nil
 }
 
+func(p *Packet) readUnsignedLong() (interface{}, error) {
+	bytes, err := p.readBytes(8)
+	if err != nil {
+		return 0, err
+	}
+	var value uint64
+	value |= uint64(bytes.([]byte)[0])
+	value |= uint64(bytes.([]byte)[1]) << 8
+	value |= uint64(bytes.([]byte)[2]) << 16
+	value |= uint64(bytes.([]byte)[3]) << 24
+	value |= uint64(bytes.([]byte)[4]) << 32
+	value |= uint64(bytes.([]byte)[5]) << 40
+	value |= uint64(bytes.([]byte)[6]) << 48
+	value |= uint64(bytes.([]byte)[7]) << 56
+	return value, nil
+}
+
 func(p *Packet) readFloat() (interface{}, error) {
 	bytes, err := p.readBytes(4)
 	if err != nil {
@@ -140,13 +160,76 @@ func(p *Packet) readChat() (interface{}, error) { //needs Chat structure for ret
 func(p *Packet) readIdentifier() (interface{}, error) { //requires identifier type
 	content, err := p.readString()
 	if err != nil {
-		return "", err
+		return Identifier{}, err
 	}
 	if len(content.(string)) > 32767 {
-		return "", errors.New("Chat message reached maximum limit of " + strconv.Itoa(32767))
+		return Identifier{}, errors.New("Identifier message reached maximum limit of " + strconv.Itoa(32767))
 	}
 
-	return content, nil
+	reg := regexp.MustCompile(`(?m)[\w\-]*:[\w\-\/\.]*`)
+
+	if reg.Match([]byte(content.(string))) {
+		identifierSplit := strings.Split(content.(string), ":")
+		return Identifier{
+			Namespace: identifierSplit[0],
+			Thing:     identifierSplit[1],
+		}, nil
+	}
+
+	return Identifier{}, errors.New("identifier did not match template of [\\w\\-]*:[\\w\\-\\/\\.]*")
+}
+
+func(p *Packet) readPosition() (interface{}, error) {
+	posnum, err := p.readUnsignedLong()
+	if err != nil {
+		return Position{}, err
+	}
+	var X = int32(posnum.(uint64) >> 38)
+	var Y = int32(posnum.(uint64) & 0xFFF)
+	var Z = int32(posnum.(uint64) << 26 >> 38)
+
+	if X >= 2^25 {
+		X -= 2^26
+	}
+	if Y >= 2^11 {
+		Y -= 2^12
+	}
+	if Z >= 2^25 {
+		Z -= 2^26
+	}
+
+	return Position{X, Y, Z}, nil
+}
+
+//TODO: func readMetaData()
+
+//TODO: func readSlot()
+
+//TODO: func readNBT()
+
+func(p *Packet) readAngle() (interface{}, error) {
+	return p.readShort()
+}
+
+func(p *Packet) readUUID() (interface{}, error) {
+	most, err := p.readUnsignedLong()
+	least, err := p.readUnsignedLong()
+	if err != nil {
+		return UUID{0, 0, make([]byte, 16), UUID_DEFAULT}, err
+	}
+
+	bytes := make([]byte, 16)
+	binary.LittleEndian.PutUint64(bytes, most.(uint64))
+	binary.LittleEndian.PutUint64(bytes, least.(uint64))
+
+	str := ""
+	str += hex.EncodeToString(bytes[0:3]) + "-"
+	str += hex.EncodeToString(bytes[4:5]) + "-"
+	str += hex.EncodeToString(bytes[6:7]) + "-"
+	str += hex.EncodeToString(bytes[8:9]) + "-"
+	str += hex.EncodeToString(bytes[10:15])
+
+	return UUID{most.(uint64), least.(uint64), bytes, str}, nil
 }
 
 func(p *Packet) readVarInt() (interface{}, error) {
